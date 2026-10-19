@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
+import useStockfish from "./hooks/useStockfish";
 
 function App() {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
-
+  const { getBestMove, readyRef } = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoves, setLegalMoves] = useState([]);
+  const [isAiThinking, setIsAiThinking] = useState(false);
 
   function makeMove(sourceSquare, targetSquare) {
     const gameCopy = new Chess();
@@ -28,9 +30,56 @@ function App() {
       setSelectedSquare(null);
       setLegalMoves([]);
 
+      // AI plays Black after White's move
+      if (!gameCopy.isGameOver() && gameCopy.turn() === "b") {
+        makeAiMove(gameCopy.fen(), gameCopy.pgn());
+      }
+
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async function makeAiMove(fen, pgn) {
+    setIsAiThinking(true);
+
+    try {
+      const bestMove = await getBestMove(fen);
+
+      if (!bestMove || bestMove === "(none)" || bestMove === "0000") {
+        return;
+      }
+
+      const updatedGame = new Chess();
+      updatedGame.loadPgn(pgn);
+
+      // Make sure the position is still the expected one
+      if (updatedGame.fen() !== fen) return;
+
+      if (updatedGame.isGameOver()) return;
+
+      const aiMove = updatedGame.move({
+        from: bestMove.slice(0, 2),
+        to: bestMove.slice(2, 4),
+        promotion: bestMove[4] || "q",
+      });
+
+      if (!aiMove) {
+        console.error("Stockfish returned an invalid move:", bestMove);
+        return;
+      }
+
+      setGame(updatedGame);
+      setPosition(updatedGame.fen());
+      setSelectedSquare(null);
+      setLegalMoves([]);
+
+      console.log("AI played:", aiMove.san);
+    } catch (error) {
+      console.error("AI Move Error:", error.message);
+    } finally {
+      setIsAiThinking(false);
     }
   }
 
@@ -224,12 +273,24 @@ function App() {
                   setSelectedSquare(null);
                   setLegalMoves([]);
                 }
-              }} 
+              }}
               disabled={game.history().length === 0}
             >
               ↶ Undo Move
             </button>
           </div>
+          <button
+            onClick={async () => {
+              try {
+                const bestMove = await getBestMove(game.fen());
+                console.log("Stockfish Best Move:", bestMove);
+              } catch (error) {
+                console.error("Stockfish Error:", error.message);
+              }
+            }}
+          >
+            Test Stockfish
+          </button>
         </div>
 
         <aside className="side-panel">
