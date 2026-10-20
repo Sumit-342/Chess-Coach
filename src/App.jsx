@@ -13,6 +13,9 @@ function App() {
   const [isAiThinking, setIsAiThinking] = useState(false);
 
   function makeMove(sourceSquare, targetSquare) {
+    if (isAiThinking) return false;
+    if (game.turn() === "b") return false;
+
     const gameCopy = new Chess();
     gameCopy.loadPgn(game.pgn());
 
@@ -84,6 +87,8 @@ function App() {
   }
 
   function selectSquare(square) {
+    if (isAiThinking) return;
+
     const piece = game.get(square);
 
     if (!piece || piece.color !== game.turn()) {
