@@ -3,27 +3,45 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
 import useStockfish from "./hooks/useStockfish";
+import PromotionPicker from "./components/PromotionPicker";
+
 
 function App() {
-  const [game, setGame] = useState(new Chess());
+  const [game, setGame] = useState(new Chess());  
   const [position, setPosition] = useState(game.fen());
   const { getBestMove, readyRef } = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoves, setLegalMoves] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
+  const [pendingPromotion, setPendingPromotion] = useState(null);
 
-  function makeMove(sourceSquare, targetSquare) {
+  function makeMove(sourceSquare, targetSquare, promotion = null) {
     if (isAiThinking) return false;
     if (game.turn() === "b") return false;
 
     const gameCopy = new Chess();
     gameCopy.loadPgn(game.pgn());
 
+    const piece = gameCopy.get(sourceSquare);
+
+    const isPromotion =
+      piece?.type === "p" &&
+      ((piece.color === "w" && targetSquare[1] === "8") ||
+        (piece.color === "b" && targetSquare[1] === "1"));
+
+    if (isPromotion && !promotion) {
+      setPendingPromotion({
+        sourceSquare,
+        targetSquare,
+      });
+      return false;
+    }
+
     try {
       const move = gameCopy.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: "q",
+        promotion: promotion || "q",
       });
 
       if (!move) return false;
@@ -42,6 +60,16 @@ function App() {
     } catch {
       return false;
     }
+  }
+
+  function completePromotion(piece) {
+    if (!pendingPromotion) return;
+
+    const { sourceSquare, targetSquare } = pendingPromotion;
+
+    setPendingPromotion(null);
+
+    makeMove(sourceSquare, targetSquare, piece);
   }
 
   async function makeAiMove(fen, pgn) {
@@ -115,6 +143,7 @@ function App() {
     const newGame = new Chess();
     setGame(newGame);
     setPosition(newGame.fen());
+    setPendingPromotion(null);
   }
 
   const checkedKingSquare = game.isCheck()
@@ -249,6 +278,10 @@ function App() {
               }}
             />
           </div>
+
+          {pendingPromotion && <PromotionPicker onSelect={completePromotion} />}
+
+          <div className="game-status"></div>
 
           <div className="game-status">
             <span className="turn-icon">♟</span>

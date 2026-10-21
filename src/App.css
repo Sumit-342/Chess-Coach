@@ -533,3 +533,55 @@ footer {
 .move-history-row:hover {
   background: rgba(184, 242, 139, 0.07);
 }
+
+
+/* Pawn Promotion Picker */
+
+.promotion-picker {
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid rgba(184, 242, 139, 0.35);
+  border-radius: 14px;
+  background: #171b22;
+  text-align: center;
+}
+
+.promotion-picker h3 {
+  margin: 0 0 14px;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.promotion-options {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.promotion-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  min-width: 68px;
+  border: 1px solid #353c46;
+  border-radius: 10px;
+  background: #222832;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.promotion-options button:hover {
+  transform: translateY(-3px);
+  border-color: #b8f28b;
+}
+
+.promotion-options button span {
+  font-size: 32px;
+}
+
+.promotion-options button small {
+  font-size: 11px;
+}
