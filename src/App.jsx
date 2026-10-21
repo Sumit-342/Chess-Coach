@@ -5,9 +5,8 @@ import "./App.css";
 import useStockfish from "./hooks/useStockfish";
 import PromotionPicker from "./components/PromotionPicker";
 
-
 function App() {
-  const [game, setGame] = useState(new Chess());  
+  const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
   const { getBestMove, readyRef } = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
@@ -317,18 +316,6 @@ function App() {
               ↶ Undo Move
             </button>
           </div>
-          <button
-            onClick={async () => {
-              try {
-                const bestMove = await getBestMove(game.fen());
-                console.log("Stockfish Best Move:", bestMove);
-              } catch (error) {
-                console.error("Stockfish Error:", error.message);
-              }
-            }}
-          >
-            Test Stockfish
-          </button>
         </div>
 
         <aside className="side-panel">
