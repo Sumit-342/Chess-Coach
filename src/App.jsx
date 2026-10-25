@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
@@ -8,7 +8,8 @@ import PromotionPicker from "./components/PromotionPicker";
 function App() {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
-  const { getBestMove, readyRef } = useStockfish();
+  const gameIdRef = useRef(0);
+  const { getBestMove, readyRef ,restartWorker} = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoves, setLegalMoves] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
@@ -72,10 +73,14 @@ function App() {
   }
 
   async function makeAiMove(fen, pgn) {
+    const requestGameId = gameIdRef.current;
+
     setIsAiThinking(true);
 
     try {
       const bestMove = await getBestMove(fen);
+
+      if (requestGameId !== gameIdRef.current) return;
 
       if (!bestMove || bestMove === "(none)" || bestMove === "0000") {
         return;
@@ -109,7 +114,9 @@ function App() {
     } catch (error) {
       console.error("AI Move Error:", error.message);
     } finally {
-      setIsAiThinking(false);
+      if (requestGameId === gameIdRef.current) {
+        setIsAiThinking(false);
+      }
     }
   }
 
@@ -139,10 +146,15 @@ function App() {
   }
 
   function resetGame() {
+    gameIdRef.current += 1;
+
+    restartWorker();
+
     const newGame = new Chess();
     setGame(newGame);
     setPosition(newGame.fen());
     setPendingPromotion(null);
+    setIsAiThinking(false);
   }
 
   const checkedKingSquare = game.isCheck()
@@ -305,10 +317,15 @@ function App() {
                 updatedGame.loadPgn(game.pgn());
 
                 if (updatedGame.undo()) {
+                  gameIdRef.current += 1;
+
+                  restartWorker();
+
                   setGame(updatedGame);
                   setPosition(updatedGame.fen());
                   setSelectedSquare(null);
                   setLegalMoves([]);
+                  setIsAiThinking(false);
                 }
               }}
               disabled={game.history().length === 0}
