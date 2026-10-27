@@ -1,4 +1,24 @@
-function PromotionPicker({ onSelect }) {
+function PromotionPicker({ onSelect, targetSquare, boardSize }) {
+  const squareSize = boardSize / 8;
+
+  const fileIndex = targetSquare.charCodeAt(0) - 97;
+  const rowIndex = 8 - Number(targetSquare[1]);
+
+  const pickerWidth = 64;
+  const pickerHeight = 232;
+
+  const left = Math.max(
+    0,
+    Math.min(fileIndex * squareSize, boardSize - pickerWidth),
+  );
+
+  const rawTop =
+    rowIndex < 4
+      ? rowIndex * squareSize
+      : (rowIndex + 1) * squareSize - pickerHeight;
+
+  const top = Math.max(0, Math.min(rawTop, boardSize - pickerHeight));
+
   const pieces = [
     { name: "Queen", symbol: "♕", value: "q" },
     { name: "Rook", symbol: "♖", value: "r" },
@@ -7,21 +27,23 @@ function PromotionPicker({ onSelect }) {
   ];
 
   return (
-    <div className="promotion-picker">
-      <h3>Choose Promotion</h3>
-
-      <div className="promotion-options">
-        {pieces.map((piece) => (
-          <button
-            key={piece.value}
-            onClick={() => onSelect(piece.value)}
-            title={piece.name}
-          >
-            <span>{piece.symbol}</span>
-            <small>{piece.name}</small>
-          </button>
-        ))}
-      </div>
+    <div
+      className="promotion-picker"
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+      }}
+    >
+      {pieces.map((piece) => (
+        <button
+          key={piece.value}
+          onClick={() => onSelect(piece.value)}
+          title={piece.name}
+          aria-label={`Promote to ${piece.name}`}
+        >
+          <span>{piece.symbol}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -9,11 +9,32 @@ function App() {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
   const gameIdRef = useRef(0);
-  const { getBestMove, readyRef ,restartWorker} = useStockfish();
+  const { getBestMove, readyRef, restartWorker } = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoves, setLegalMoves] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [pendingPromotion, setPendingPromotion] = useState(null);
+  const boardWrapperRef = useRef(null);
+  const [boardSize, setBoardSize] = useState(0);
+
+
+  useEffect(() => {
+    const wrapper = boardWrapperRef.current;
+
+    if (!wrapper) return;
+
+    const updateSize = () => {
+      setBoardSize(wrapper.getBoundingClientRect().width);
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(wrapper);
+
+    return () => observer.disconnect();
+  }, []);
+
 
   function makeMove(sourceSquare, targetSquare, promotion = null) {
     if (isAiThinking) return false;
@@ -235,7 +256,7 @@ function App() {
             <span className="live-label">● LIVE GAME</span>
           </div>
 
-          <div className="board-wrapper">
+          <div className="board-wrapper" ref={boardWrapperRef}>
             <Chessboard
               options={{
                 position,
@@ -288,9 +309,14 @@ function App() {
                 },
               }}
             />
+            {pendingPromotion && boardSize > 0 && (
+              <PromotionPicker
+                onSelect={completePromotion}
+                targetSquare={pendingPromotion.targetSquare}
+                boardSize={boardSize}
+              />
+            )}
           </div>
-
-          {pendingPromotion && <PromotionPicker onSelect={completePromotion} />}
 
           <div className="game-status"></div>
 

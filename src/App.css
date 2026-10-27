@@ -174,6 +174,7 @@ button {
 }
 
 .board-wrapper {
+  position: relative;
   width: 100%;
   max-width: 620px;
   margin: 0 auto;
@@ -534,54 +535,45 @@ footer {
   background: rgba(184, 242, 139, 0.07);
 }
 
-
 /* Pawn Promotion Picker */
 
 .promotion-picker {
-  margin: 16px 0;
-  padding: 18px;
-  border: 1px solid rgba(184, 242, 139, 0.35);
-  border-radius: 14px;
-  background: #171b22;
-  text-align: center;
-}
+  position: absolute;
+  z-index: 10;
 
-.promotion-picker h3 {
-  margin: 0 0 14px;
-  color: #ffffff;
-  font-size: 16px;
-}
-
-.promotion-options {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.promotion-options button {
   display: flex;
   flex-direction: column;
+  gap: 0;
+
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(23, 27, 34, 0.96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.promotion-picker button {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px;
-  min-width: 68px;
-  border: 1px solid #353c46;
-  border-radius: 10px;
-  background: #222832;
+  justify-content: center;
+
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+
+  border: none;
+  border-radius: 5px;
+  background: transparent;
   color: #ffffff;
   cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
+
+  transition: background 0.15s;
 }
 
-.promotion-options button:hover {
-  transform: translateY(-3px);
-  border-color: #b8f28b;
+.promotion-picker button:hover {
+  background: rgba(184, 242, 139, 0.25);
 }
 
-.promotion-options button span {
-  font-size: 32px;
-}
-
-.promotion-options button small {
-  font-size: 11px;
+.promotion-picker button span {
+  font-size: 40px;
+  line-height: 1;
 }
