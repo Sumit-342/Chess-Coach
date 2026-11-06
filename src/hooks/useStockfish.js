@@ -66,7 +66,17 @@ export default function useStockfish() {
       }
 
       if (line === "readyok") {
+        console.log("StockFIsh Configuration acknowlegded");
         readyRef.current = true;
+
+        const pending = pendingMoveRef.current;
+
+        if (pending?.waitingForReady) {
+          pending.waitingForReady = false;
+
+          worker.postMessage(`position fen ${pending.fen}`);
+          worker.postMessage(`go movetime ${pending.movetime}`);
+        }
 
         if (readyPromiseRef.current) {
           readyPromiseRef.current.resolve();
@@ -110,44 +120,56 @@ export default function useStockfish() {
     };
   }, []);
 
-  const getBestMove = useCallback(async (fen, movetime = 500) => {
-    const requestGeneration = workerGenerationRef.current;
+  const getBestMove = useCallback(
+    async (fen, skillLevel = 20, movetime = 500) => {
+      const requestGeneration = workerGenerationRef.current;
 
-    while (!readyRef.current) {
-      const readiness = readyPromiseRef.current;
+      while (!readyRef.current) {
+        const readiness = readyPromiseRef.current;
 
-      if (!readiness) {
-        throw new Error("Stockfish readiness is unavailable.");
+        if (!readiness) {
+          throw new Error("Stockfish readiness is unavailable.");
+        }
+
+        await readiness.promise;
+
+        if (requestGeneration !== workerGenerationRef.current) {
+          throw new Error("Stockfish request cancelled.");
+        }
       }
-
-      await readiness.promise;
 
       if (requestGeneration !== workerGenerationRef.current) {
         throw new Error("Stockfish request cancelled.");
       }
-    }
 
-    if (requestGeneration !== workerGenerationRef.current) {
-      throw new Error("Stockfish request cancelled.");
-    }
+      const worker = workerRef.current;
 
-    const worker = workerRef.current;
+      if (!worker || !readyRef.current) {
+        throw new Error("Stockfish is not ready yet.");
+      }
 
-    if (!worker || !readyRef.current) {
-      throw new Error("Stockfish is not ready yet.");
-    }
+      if (pendingMoveRef.current) {
+        throw new Error("Stockfish is already calculating a move.");
+      }
 
-    if (pendingMoveRef.current) {
-      throw new Error("Stockfish is already calculating a move.");
-    }
+      return new Promise((resolve, reject) => {
+        pendingMoveRef.current = {
+          resolve,
+          reject,
+          waitingForReady: true,
+          fen,
+          movetime,
+        };
 
-    return new Promise((resolve, reject) => {
-      pendingMoveRef.current = { resolve, reject };
-
-      worker.postMessage(`position fen ${fen}`);
-      worker.postMessage(`go movetime ${movetime}`);
-    });
-  }, []);
-
+        worker.postMessage(`setoption name Skill Level value ${skillLevel}`);
+        console.log("Requested Stockfish Skill lvl : ", skillLevel);
+        worker.postMessage("setoption name UCI_LimitStrength value false");
+        console.log("Applying Skill Lvl : ", skillLevel);
+        console.log("UCI_LimitStrenght : false");
+        worker.postMessage("isready");
+      });
+    },
+    [],
+  );
   return { getBestMove, readyRef, restartWorker };
 }

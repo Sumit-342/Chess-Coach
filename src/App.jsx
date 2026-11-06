@@ -5,9 +5,34 @@ import "./App.css";
 import useStockfish from "./hooks/useStockfish";
 import PromotionPicker from "./components/PromotionPicker";
 
+const difficultyLevels = {
+  beginner: {
+    name: "Beginner",
+    skillLevel: 3,
+    moveTime: 200,
+  },
+  intermediate: {
+    name: "Intermediate",
+    skillLevel: 8,
+    moveTime: 500,
+  },
+  advanced: {
+    name: "Advanced",
+    skillLevel: 14,
+    moveTime: 1000,
+  },
+  expert: {
+    name: "Expert",
+    skillLevel: 20,
+    moveTime: 1500,
+  },
+};
+
 function App() {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
+  const [gameStarted, setGameStarted] = useState(false);
+  const [difficulty, setDifficulty] = useState("begginer");
   const gameIdRef = useRef(0);
   const { getBestMove, readyRef, restartWorker } = useStockfish();
   const [selectedSquare, setSelectedSquare] = useState(null);
@@ -16,7 +41,6 @@ function App() {
   const [pendingPromotion, setPendingPromotion] = useState(null);
   const boardWrapperRef = useRef(null);
   const [boardSize, setBoardSize] = useState(0);
-
 
   useEffect(() => {
     const wrapper = boardWrapperRef.current;
@@ -34,7 +58,6 @@ function App() {
 
     return () => observer.disconnect();
   }, []);
-
 
   function makeMove(sourceSquare, targetSquare, promotion = null) {
     if (isAiThinking) return false;
@@ -99,7 +122,13 @@ function App() {
     setIsAiThinking(true);
 
     try {
-      const bestMove = await getBestMove(fen);
+      const selectedLevel = difficultyLevels[difficulty];
+
+      const bestMove = await getBestMove(
+        fen,
+        selectedLevel.skillLevel,
+        selectedLevel.moveTime,
+      );
 
       if (requestGameId !== gameIdRef.current) return;
 
@@ -164,6 +193,22 @@ function App() {
   function onPieceDrop({ sourceSquare, targetSquare }) {
     if (!targetSquare) return false;
     return makeMove(sourceSquare, targetSquare);
+  }
+
+  function startGame() {
+    const newGame = new Chess();
+
+    gameIdRef.current += 1;
+    restartWorker();
+
+    setGame(newGame);
+    setPosition(newGame.fen());
+    setSelectedSquare(null);
+    setLegalMoves([]);
+    setPendingPromotion(null);
+    setIsAiThinking(false);
+
+    setGameStarted(true);
   }
 
   function resetGame() {
@@ -236,218 +281,253 @@ function App() {
         </div>
       </header>
 
-      <section className="hero">
-        <p className="eyebrow">YOUR PERSONAL CHESS TRAINER</p>
-        <h2>
-          Every move is a <span>lesson.</span>
-        </h2>
-        <p className="hero-description">
-          Play chess, sharpen your decisions, and learn one move at a time.
-        </p>
-      </section>
+      {!gameStarted ? (
+        <section className="setup-panel">
+          <p className="eyebrow">YOUR PERSONAL CHESS TRAINER</p>
 
-      <section className="game-layout">
-        <div className="board-panel">
-          <div className="board-heading">
-            <div>
-              <h3>Practice Board</h3>
-              <p>White pieces · Local practice</p>
-            </div>
-            <span className="live-label">● LIVE GAME</span>
+          <h2>Choose Your Challenge</h2>
+
+          <p className="hero-description">
+            Select your difficulty and prepare for your next game.
+          </p>
+
+          <div className="setup-difficulties">
+            {Object.entries(difficultyLevels).map(([key, level]) => (
+              <button
+                key={key}
+                className={`setup-difficulty ${
+                  difficulty === key ? "selected" : ""
+                }`}
+                onClick={() => setDifficulty(key)}
+              >
+                <strong>{level.name}</strong>
+                <span>
+                  {key === "beginner" && "Build your fundamentals"}
+                  {key === "intermediate" && "Develop your strategy"}
+                  {key === "advanced" && "Improve your calculation"}
+                  {key === "expert" && "Test your chess skills"}
+                </span>
+              </button>
+            ))}
           </div>
 
-          <div className="board-wrapper" ref={boardWrapperRef}>
-            <Chessboard
-              options={{
-                position,
-                onPieceDrop,
-                boardOrientation: "white",
-                allowDragging: !game.isGameOver(),
-                animationDuration: 180,
-
-                onSquareClick: ({ square }) => {
-                  if (selectedSquare) {
-                    const moved = makeMove(selectedSquare, square);
-
-                    if (moved) return;
-                  }
-
-                  selectSquare(square);
-                },
-
-                onPieceClick: ({ square }) => {
-                  selectSquare(square);
-                },
-
-                squareStyles: {
-                  ...Object.fromEntries(
-                    legalMoves.map((move) => [
-                      move.to,
-                      {
-                        background: game.get(move.to)
-                          ? "radial-gradient(transparent 60%, rgba(255, 100, 100, 0.65) 61%)"
-                          : "radial-gradient(rgba(30, 30, 30, 0.35) 18%, transparent 20%)",
-                      },
-                    ]),
-                  ),
-
-                  ...(selectedSquare
-                    ? {
-                        [selectedSquare]: {
-                          backgroundColor: "rgba(184, 242, 139, 0.45)",
-                        },
-                      }
-                    : {}),
-
-                  ...(checkedKingSquare
-                    ? {
-                        [checkedKingSquare]: {
-                          backgroundColor: "rgba(255, 45, 65, 0.75)",
-                        },
-                      }
-                    : {}),
-                },
-              }}
-            />
-            {pendingPromotion && boardSize > 0 && (
-              <PromotionPicker
-                onSelect={completePromotion}
-                targetSquare={pendingPromotion.targetSquare}
-                boardSize={boardSize}
-              />
-            )}
-          </div>
-
-          <div className="game-status"></div>
-
-          <div className="game-status">
-            <span className="turn-icon">♟</span>
-            <div>
-              <strong>{status}</strong>
-              <p>
-                {game.isGameOver()
-                  ? "Start a new game to play again."
-                  : "Make your move on the board."}
-              </p>
-            </div>
-          </div>
-
-          <div className="board-actions">
-            <button className="primary-button" onClick={resetGame}>
-              ↻ New Game
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                const updatedGame = new Chess();
-                updatedGame.loadPgn(game.pgn());
-
-                if (updatedGame.undo()) {
-                  gameIdRef.current += 1;
-
-                  restartWorker();
-
-                  setGame(updatedGame);
-                  setPosition(updatedGame.fen());
-                  setSelectedSquare(null);
-                  setLegalMoves([]);
-                  setIsAiThinking(false);
-                }
-              }}
-              disabled={game.history().length === 0}
-            >
-              ↶ Undo Move
-            </button>
-          </div>
-        </div>
-
-        <aside className="side-panel">
-          <div className="info-card coach-card">
-            <div className="card-icon">✦</div>
-            <p className="card-label">YOUR AI COACH</p>
-            <h3>Think beyond the board.</h3>
-            <p className="muted">
-              Soon, your coach will help you understand mistakes, spot threats,
-              and discover stronger moves.
+          <button className="primary-button start-button" onClick={startGame}>
+            Start Game →
+          </button>
+        </section>
+      ) : (
+        <>
+          <section className="hero">
+            <p className="eyebrow">YOUR PERSONAL CHESS TRAINER</p>
+            <h2>
+              Every move is a <span>lesson.</span>
+            </h2>
+            <p className="hero-description">
+              Play chess, sharpen your decisions, and learn one move at a time.
             </p>
-            <div className="feature-list">
-              <div>
-                <span>✓</span> Move analysis
-              </div>
-              <div>
-                <span>✓</span> Mistake detection
-              </div>
-              <div>
-                <span>✓</span> Personalized lessons
-              </div>
-            </div>
-            <span className="coming-soon">COMING IN A FUTURE UPDATE</span>
-          </div>
+          </section>
 
-          <div className="info-card difficulty-card">
-            <p className="card-label">YOUR TRAINING PATH</p>
-            <h3>Choose your challenge</h3>
-            <div className="difficulty-option">
-              <span className="difficulty-symbol beginner">●</span>
-              <div>
-                <strong>Beginner</strong>
-                <p>Build your fundamentals</p>
-              </div>
-              <span className="locked-label">SOON</span>
-            </div>
-            <div className="difficulty-option">
-              <span className="difficulty-symbol intermediate">◆</span>
-              <div>
-                <strong>Intermediate</strong>
-                <p>Develop your strategy</p>
-              </div>
-              <span className="locked-label">SOON</span>
-            </div>
-            <div className="difficulty-option">
-              <span className="difficulty-symbol expert">♛</span>
-              <div>
-                <strong>Expert</strong>
-                <p>Test your calculation</p>
-              </div>
-              <span className="locked-label">SOON</span>
-            </div>
-          </div>
-
-          <div className="tip-card">
-            <span>♟</span>
-            <p>
-              <strong>Remember:</strong> Every strong player was once a
-              beginner. Focus on understanding, not just winning.
-            </p>
-          </div>
-
-          <div className="info-card history-card">
-            <p className="card-label">YOUR GAME</p>
-            <h3>Move History</h3>
-
-            {formattedMoves.length === 0 ? (
-              <p className="muted">Your moves will appear here.</p>
-            ) : (
-              <div className="move-history">
-                <div className="move-history-header">
-                  <span>#</span>
-                  <span>WHITE</span>
-                  <span>BLACK</span>
+          <section className="game-layout">
+            <div className="board-panel">
+              <div className="board-heading">
+                <div>
+                  <h3>Practice Board</h3>
+                  <p>White pieces · Local practice</p>
                 </div>
-
-                {formattedMoves.map((move) => (
-                  <div className="move-history-row" key={move.moveNumber}>
-                    <span>{move.moveNumber}.</span>
-                    <span>{move.white}</span>
-                    <span>{move.black}</span>
-                  </div>
-                ))}
+                <span className="live-label">● LIVE GAME</span>
               </div>
-            )}
-          </div>
-        </aside>
-      </section>
 
+              <div className="board-wrapper" ref={boardWrapperRef}>
+                <Chessboard
+                  options={{
+                    position,
+                    onPieceDrop,
+                    boardOrientation: "white",
+                    allowDragging: !game.isGameOver(),
+                    animationDuration: 180,
+
+                    onSquareClick: ({ square }) => {
+                      if (selectedSquare) {
+                        const moved = makeMove(selectedSquare, square);
+
+                        if (moved) return;
+                      }
+
+                      selectSquare(square);
+                    },
+
+                    onPieceClick: ({ square }) => {
+                      selectSquare(square);
+                    },
+
+                    squareStyles: {
+                      ...Object.fromEntries(
+                        legalMoves.map((move) => [
+                          move.to,
+                          {
+                            background: game.get(move.to)
+                              ? "radial-gradient(transparent 60%, rgba(255, 100, 100, 0.65) 61%)"
+                              : "radial-gradient(rgba(30, 30, 30, 0.35) 18%, transparent 20%)",
+                          },
+                        ]),
+                      ),
+
+                      ...(selectedSquare
+                        ? {
+                            [selectedSquare]: {
+                              backgroundColor: "rgba(184, 242, 139, 0.45)",
+                            },
+                          }
+                        : {}),
+
+                      ...(checkedKingSquare
+                        ? {
+                            [checkedKingSquare]: {
+                              backgroundColor: "rgba(255, 45, 65, 0.75)",
+                            },
+                          }
+                        : {}),
+                    },
+                  }}
+                />
+                {pendingPromotion && boardSize > 0 && (
+                  <PromotionPicker
+                    onSelect={completePromotion}
+                    targetSquare={pendingPromotion.targetSquare}
+                    boardSize={boardSize}
+                  />
+                )}
+              </div>
+
+              <div className="game-status">
+                <span className="turn-icon">♟</span>
+                <div>
+                  <strong>{status}</strong>
+                  <p>
+                    {game.isGameOver()
+                      ? "Start a new game to play again."
+                      : "Make your move on the board."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="board-actions">
+                <button className="primary-button" onClick={resetGame}>
+                  ↻ New Game
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => {
+                    const updatedGame = new Chess();
+                    updatedGame.loadPgn(game.pgn());
+
+                    if (updatedGame.undo()) {
+                      gameIdRef.current += 1;
+
+                      restartWorker();
+
+                      setGame(updatedGame);
+                      setPosition(updatedGame.fen());
+                      setSelectedSquare(null);
+                      setLegalMoves([]);
+                      setIsAiThinking(false);
+                    }
+                  }}
+                  disabled={game.history().length === 0}
+                >
+                  ↶ Undo Move
+                </button>
+              </div>
+            </div>
+
+            <aside className="side-panel">
+              <div className="info-card coach-card">
+                <div className="card-icon">✦</div>
+                <p className="card-label">YOUR AI COACH</p>
+                <h3>Think beyond the board.</h3>
+                <p className="muted">
+                  Soon, your coach will help you understand mistakes, spot
+                  threats, and discover stronger moves.
+                </p>
+                <div className="feature-list">
+                  <div>
+                    <span>✓</span> Move analysis
+                  </div>
+                  <div>
+                    <span>✓</span> Mistake detection
+                  </div>
+                  <div>
+                    <span>✓</span> Personalized lessons
+                  </div>
+                </div>
+                <span className="coming-soon">COMING IN A FUTURE UPDATE</span>
+              </div>
+
+              <div className="info-card difficulty-card">
+                <p className="card-label">YOUR TRAINING PATH</p>
+                <h3>Choose your challenge</h3>
+                <div className="difficulty-option">
+                  <span className="difficulty-symbol beginner">●</span>
+                  <div>
+                    <strong>Beginner</strong>
+                    <p>Build your fundamentals</p>
+                  </div>
+                  <span className="locked-label">SOON</span>
+                </div>
+                <div className="difficulty-option">
+                  <span className="difficulty-symbol intermediate">◆</span>
+                  <div>
+                    <strong>Intermediate</strong>
+                    <p>Develop your strategy</p>
+                  </div>
+                  <span className="locked-label">SOON</span>
+                </div>
+                <div className="difficulty-option">
+                  <span className="difficulty-symbol expert">♛</span>
+                  <div>
+                    <strong>Expert</strong>
+                    <p>Test your calculation</p>
+                  </div>
+                  <span className="locked-label">SOON</span>
+                </div>
+              </div>
+
+              <div className="tip-card">
+                <span>♟</span>
+                <p>
+                  <strong>Remember:</strong> Every strong player was once a
+                  beginner. Focus on understanding, not just winning.
+                </p>
+              </div>
+
+              <div className="info-card history-card">
+                <p className="card-label">YOUR GAME</p>
+                <h3>Move History</h3>
+
+                {formattedMoves.length === 0 ? (
+                  <p className="muted">Your moves will appear here.</p>
+                ) : (
+                  <div className="move-history">
+                    <div className="move-history-header">
+                      <span>#</span>
+                      <span>WHITE</span>
+                      <span>BLACK</span>
+                    </div>
+
+                    {formattedMoves.map((move) => (
+                      <div className="move-history-row" key={move.moveNumber}>
+                        <span>{move.moveNumber}.</span>
+                        <span>{move.white}</span>
+                        <span>{move.black}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          </section>
+        </>
+      )}
       <footer>
         <span>CHESS COACH</span>
         <span>BUILT TO HELP YOU THINK BETTER ♟</span>

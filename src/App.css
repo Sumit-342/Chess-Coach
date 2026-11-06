@@ -577,3 +577,77 @@ footer {
   font-size: 40px;
   line-height: 1;
 }
+
+
+/* Game Setup Screen */
+
+.setup-panel {
+  max-width: 850px;
+  margin: 70px auto;
+  padding: 45px;
+  text-align: center;
+  background: #111821;
+  border: 1px solid #26303b;
+  border-radius: 18px;
+}
+
+.setup-panel h2 {
+  margin: 15px 0 10px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+.setup-difficulties {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin: 35px 0;
+}
+
+.setup-difficulty {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 22px;
+  text-align: left;
+  border: 1px solid #34404b;
+  border-radius: 12px;
+  background: #18212b;
+  color: #e8edf5;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.setup-difficulty:hover {
+  border-color: #b8f28b;
+}
+
+.setup-difficulty.selected {
+  border-color: #b8f28b;
+  background: #1c2a20;
+  box-shadow: 0 0 0 1px #b8f28b;
+}
+
+.setup-difficulty strong {
+  font-size: 15px;
+}
+
+.setup-difficulty span {
+  color: #87939f;
+  font-size: 11px;
+}
+
+.start-button {
+  min-width: 180px;
+}
+
+@media (max-width: 560px) {
+  .setup-panel {
+    margin: 35px auto;
+    padding: 25px 16px;
+  }
+
+  .setup-difficulties {
+    grid-template-columns: 1fr;
+  }
+}
